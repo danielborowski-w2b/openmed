@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenMed.pl — SiteFocus & SiteRadius Analysis</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0e17;
+            --surface: #111827;
+            --surface-hover: #1a2336;
+            --border: #1e293b;
+            --text: #e2e8f0;
+            --text-dim: #94a3b8;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.15);
+            --green: #34d399;
+            --amber: #fbbf24;
+            --rose: #f472b6;
+            --violet: #a78bfa;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Subtle grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 60px 24px 80px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 64px;
+            animation: fadeUp 0.8s ease-out;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: var(--accent-glow);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(2.2rem, 5vw, 3.5rem);
+            font-weight: 400;
+            line-height: 1.15;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #e2e8f0 0%, #38bdf8 50%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text-dim);
+            font-size: 1.05rem;
+            max-width: 550px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* Categories */
+        .category {
+            margin-bottom: 48px;
+            animation: fadeUp 0.8s ease-out both;
+        }
+
+        .category:nth-child(2) { animation-delay: 0.1s; }
+        .category:nth-child(3) { animation-delay: 0.2s; }
+        .category:nth-child(4) { animation-delay: 0.3s; }
+        .category:nth-child(5) { animation-delay: 0.4s; }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .category-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .cat-cluster .category-icon { background: rgba(56, 189, 248, 0.12); }
+        .cat-topology .category-icon { background: rgba(167, 139, 250, 0.12); }
+        .cat-distribution .category-icon { background: rgba(52, 211, 153, 0.12); }
+        .cat-detail .category-icon { background: rgba(251, 191, 36, 0.12); }
+        .cat-similarity .category-icon { background: rgba(244, 114, 182, 0.12); }
+
+        .category-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.3rem;
+            font-weight: 400;
+        }
+
+        .category-count {
+            margin-left: auto;
+            font-size: 12px;
+            color: var(--text-dim);
+            background: var(--surface);
+            padding: 4px 10px;
+            border-radius: 100px;
+            border: 1px solid var(--border);
+        }
+
+        /* Card grid */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px;
+            text-decoration: none;
+            color: var(--text);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover {
+            background: var(--surface-hover);
+            border-color: rgba(56, 189, 248, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(56, 189, 248, 0.1);
+        }
+
+        .card:hover::before { opacity: 1; }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title .arrow {
+            margin-left: auto;
+            opacity: 0;
+            transform: translateX(-4px);
+            transition: all 0.3s ease;
+            color: var(--accent);
+            font-size: 16px;
+        }
+
+        .card:hover .card-title .arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .card-desc {
+            color: var(--text-dim);
+            font-size: 0.82rem;
+            line-height: 1.6;
+        }
+
+        .card-tag {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .tag-plotly { background: rgba(56, 189, 248, 0.1); color: var(--accent); }
+        .tag-interactive { background: rgba(52, 211, 153, 0.1); color: var(--green); }
+        .tag-chart { background: rgba(251, 191, 36, 0.1); color: var(--amber); }
+        .tag-map { background: rgba(244, 114, 182, 0.1); color: var(--rose); }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 64px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        footer a:hover { text-decoration: underline; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 640px) {
+            .container { padding: 40px 16px 60px; }
+            .cards { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="badge">SiteFocus & SiteRadius</div>
+            <h1>OpenMed.pl<br>Semantic Analysis</h1>
+            <p>Interaktywne wizualizacje analizy semantycznej domeny openmed.pl — klastry tematyczne, metryki spójności i topologia treści.</p>
+        </header>
+
+        <!-- Clustering & Dimensionality Reduction -->
+        <section class="category cat-cluster">
+            <div class="category-header">
+                <div class="category-icon">◎</div>
+                <div class="category-title">Klasteryzacja & Redukcja wymiarów</div>
+                <span class="category-count">4 wizualizacje</span>
+            </div>
+            <div class="cards">
+                <a href="wizualizacja_klastrow_TSNE.html" class="card">
+                    <div class="card-title">Klastry t-SNE <span class="arrow">→</span></div>
+                    <div class="card-desc">Wizualizacja klastrów tematycznych w przestrzeni t-SNE — grupowanie stron na podstawie podobieństwa embeddingów.</div>
+                    <span class="card-tag tag-plotly">Plotly</span>
+                </a>
+                <a href="wizualizacja_klastrow_PCA.html" class="card">
+                    <div class="card-title">Klastry PCA <span class="arrow">→</span></div>
+                    <div class="card-desc">Analiza głównych składowych (PCA) — redukcja wymiarów embeddingów do wizualizacji klastrów.</div>
+                    <span class="card-tag tag-plotly">Plotly</span>
+                </a>
+                <a href="tsne_2d_openmedpl.html" class="card">
+                    <div class="card-title">t-SNE 2D — Domena <span class="arrow">→</span></div>
+                    <div class="card-desc">Dwuwymiarowa mapa t-SNE dla openmed.pl — rozmieszczenie stron w przestrzeni semantycznej.</div>
+                    <span class="card-tag tag-interactive">Interaktywne</span>
+                </a>
+                <a href="tsne_domain.html" class="card">
+                    <div class="card-title">t-SNE — Porównanie domen <span class="arrow">→</span></div>
+                    <div class="card-desc">Porównanie pozycji openmed.pl na tle konkurencji w przestrzeni t-SNE.</div>
+                    <span class="card-tag tag-interactive">Interaktywne</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- Topology & Structure -->
+        <section class="category cat-topology">
+            <div class="category-header">
+                <div class="category-icon">◈</div>
+                <div class="category-title">Topologia & Struktura</div>
+                <span class="category-count">3 wizualizacje</span>
+            </div>
+            <div class="cards">
+                <a href="solar_openmed_pl.html" class="card">
+                    <div class="card-title">Solar System Map <span class="arrow">→</span></div>
+                    <div class="card-desc">Mapa układu słonecznego treści — centralny temat i orbitujące klastry tematyczne.</div>
+                    <span class="card-tag tag-map">Mapa</span>
+                </a>
+                <a href="radar.html" class="card">
+                    <div class="card-title">Radar Chart <span class="arrow">→</span></div>
+                    <div class="card-desc">Wykres radarowy pokrycia tematycznego — siła domeny w poszczególnych obszarach.</div>
+                    <span class="card-tag tag-chart">Wykres</span>
+                </a>
+                <a href="polar_openmedpl.html" class="card">
+                    <div class="card-title">Polar Chart <span class="arrow">→</span></div>
+                    <div class="card-desc">Biegunowy wykres rozkładu treści — polarny widok na strukturę semantyczną.</div>
+                    <span class="card-tag tag-chart">Wykres</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- Distribution & Histograms -->
+        <section class="category cat-distribution">
+            <div class="category-header">
+                <div class="category-icon">▦</div>
+                <div class="category-title">Rozkłady & Histogramy</div>
+                <span class="category-count">2 wizualizacje</span>
+            </div>
+            <div class="cards">
+                <a href="histogram_domain.html" class="card">
+                    <div class="card-title">Histogram — Domena <span class="arrow">→</span></div>
+                    <div class="card-desc">Rozkład wartości SiteFocus dla domeny — histogram gęstości semantycznej.</div>
+                    <span class="card-tag tag-chart">Wykres</span>
+                </a>
+                <a href="histogram_zones.html" class="card">
+                    <div class="card-title">Histogram — Strefy <span class="arrow">→</span></div>
+                    <div class="card-desc">Rozkład stron w strefach SiteRadius — podział na strefy centralne, peryferyjne i odległe.</div>
+                    <span class="card-tag tag-chart">Wykres</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- Detail & Heatmaps -->
+        <section class="category cat-detail">
+            <div class="category-header">
+                <div class="category-icon">◧</div>
+                <div class="category-title">Szczegóły & Heatmapy</div>
+                <span class="category-count">2 wizualizacje</span>
+            </div>
+            <div class="cards">
+                <a href="heatmap_openmed_pl.html" class="card">
+                    <div class="card-title">Heatmapa podobieństwa <span class="arrow">→</span></div>
+                    <div class="card-desc">Macierz podobieństwa stron — korelacje semantyczne między podstronami openmed.pl.</div>
+                    <span class="card-tag tag-interactive">Interaktywne</span>
+                </a>
+                <a href="detail_openmed_pl.html" class="card">
+                    <div class="card-title">Detail View <span class="arrow">→</span></div>
+                    <div class="card-desc">Szczegółowy widok metryk dla poszczególnych stron — SiteFocus, SiteRadius i klaster.</div>
+                    <span class="card-tag tag-interactive">Interaktywne</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- Similarity & Coherence -->
+        <section class="category cat-similarity">
+            <div class="category-header">
+                <div class="category-icon">◉</div>
+                <div class="category-title">Podobieństwo & Spójność</div>
+                <span class="category-count">2 wizualizacje</span>
+            </div>
+            <div class="cards">
+                <a href="mapa_spojnosci_domen.html" class="card">
+                    <div class="card-title">Mapa spójności domen <span class="arrow">→</span></div>
+                    <div class="card-desc">Porównanie spójności semantycznej domen — jak zwarta jest tematyka openmed.pl vs konkurencja.</div>
+                    <span class="card-tag tag-map">Mapa</span>
+                </a>
+                <a href="tsne_radius.html" class="card">
+                    <div class="card-title">t-SNE — SiteRadius <span class="arrow">→</span></div>
+                    <div class="card-desc">Wizualizacja SiteRadius w przestrzeni t-SNE — odległość stron od centroidu domeny.</div>
+                    <span class="card-tag tag-interactive">Interaktywne</span>
+                </a>
+                <a href="quadrant_map.html" class="card">
+                    <div class="card-title">Quadrant Map <span class="arrow">→</span></div>
+                    <div class="card-desc">Mapa kwadrantowa SiteFocus vs SiteRadius — identyfikacja stron silnych i słabych.</div>
+                    <span class="card-tag tag-map">Mapa</span>
+                </a>
+            </div>
+        </section>
+
+        <footer>
+            <p>OpenMed.pl Semantic Analysis · Powered by <a href="https://github.com/danielborowski-w2b/openmed" target="_blank">GitHub</a> · Web2Business</p>
+        </footer>
+    </div>
+</body>
+</html>
